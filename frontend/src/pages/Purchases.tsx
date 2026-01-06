@@ -1,0 +1,142 @@
+import React from "react";
+import { api } from "../api";
+import type { Purchase } from "../types";
+import { Table } from "../components/Table";
+import { Modal } from "../components/Modal";
+import { Segmented } from "../components/Segmented";
+
+export function PurchasesPage(props: { onOpenPurchase: (id:number)=>void }) {
+  const [rows, setRows] = React.useState<Purchase[]>([]);
+  const [err, setErr] = React.useState<string | null>(null);
+  const [open, setOpen] = React.useState(false);
+
+  const [form, setForm] = React.useState({
+    purchase_date: new Date().toISOString().slice(0,10),
+    description: "",
+    store: "",
+    amount_total: "",
+    is_msi: "false",
+    msi_months: "",
+    start_month: `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`,
+    split_mode: "full",
+  });
+
+  async function load() {
+    try{
+      setErr(null);
+      const res = await api.purchases();
+      setRows(res);
+    }catch(e:any){
+      setErr("No se pudieron cargar compras.");
+    }
+  }
+  React.useEffect(()=>{ load(); }, []);
+
+  async function create() {
+    const payload = {
+      purchase_date: form.purchase_date,
+      description: form.description,
+      store: form.store,
+      amount_total: Number(form.amount_total),
+      is_msi: form.is_msi === "true",
+      msi_months: form.is_msi === "true" ? Number(form.msi_months || 0) : null,
+      start_month: form.start_month,
+      split_mode: form.split_mode,
+    };
+    await api.createPurchase(payload);
+    setOpen(false);
+    setForm({...form, description:"", store:"", amount_total:"", msi_months:""});
+    await load();
+  }
+
+  return (
+    <div className="shell">
+      <div className="actions">
+        <button className="btn primary" onClick={()=>setOpen(true)}>➕ Nueva compra</button>
+        {err ? <span className="chip bad">{err}</span> : null}
+      </div>
+
+      <Table
+        rows={rows}
+        cols={[
+          { key:"purchase_date", label:"Fecha" },
+          { key:"store", label:"Tienda" },
+          { key:"description", label:"Descripción" },
+          { key:"amount_total", label:"Total", mono:true, render:(r)=>`$${r.amount_total.toFixed(2)}` },
+          { key:"monthly_amount", label:"Mensual", mono:true, render:(r)=>`$${r.monthly_amount.toFixed(2)}` },
+          { key:"pending", label:"Pendiente", mono:true, render:(r)=>(
+            r.pending <= 0.005 ? <span className="chip ok">Cerrada</span> : <span className="chip bad">${r.pending.toFixed(2)}</span>
+          )},
+        ]}
+        onRowClick={(r)=>props.onOpenPurchase(r.id)}
+      />
+
+      <Modal open={open} title="Nueva compra" onClose={()=>setOpen(false)}>
+        <div className="row">
+          <div className="field">
+            <label htmlFor="pd">Fecha</label>
+            <input id="pd" type="date" value={form.purchase_date} onChange={(e)=>setForm({...form, purchase_date:e.target.value})} />
+          </div>
+          <div className="field">
+            <label htmlFor="sm">Mes inicio (YYYY-MM)</label>
+            <input id="sm" value={form.start_month} onChange={(e)=>setForm({...form, start_month:e.target.value})} placeholder="2026-01" />
+          </div>
+        </div>
+
+        <div className="field">
+          <label htmlFor="st">Tienda</label>
+          <input id="st" value={form.store} onChange={(e)=>setForm({...form, store:e.target.value})} placeholder="Costco, Amazon, etc." />
+        </div>
+
+        <div className="field">
+          <label htmlFor="ds">Descripción</label>
+          <input id="ds" value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} placeholder="Ej. despensa, refacción..." />
+        </div>
+
+        <div className="row">
+          <div className="field">
+            <label htmlFor="amt">Monto total</label>
+            <input id="amt" inputMode="decimal" value={form.amount_total} onChange={(e)=>setForm({...form, amount_total:e.target.value})} placeholder="0.00" />
+          </div>
+          <div className="field">
+            <label>Split (expectativa)</label>
+            <Segmented
+              value={form.split_mode}
+              options={[{key:"full",label:"Completo"},{key:"half",label:"50/50"}]}
+              onChange={(v)=>setForm({...form, split_mode:v})}
+            />
+          </div>
+        </div>
+
+        <div className="row">
+          <div className="field">
+            <label>MSI</label>
+            <Segmented
+              value={form.is_msi}
+              options={[{key:"false",label:"No"},{key:"true",label:"Sí"}]}
+              onChange={(v)=>setForm({...form, is_msi:v})}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="msi">Meses</label>
+            <input
+              id="msi"
+              inputMode="numeric"
+              value={form.msi_months}
+              onChange={(e)=>setForm({...form, msi_months:e.target.value})}
+              placeholder="Ej. 12"
+              disabled={form.is_msi!=="true"}
+            />
+          </div>
+        </div>
+
+        <div className="actions">
+          <button className="btn" onClick={()=>setOpen(false)}>Cancelar</button>
+          <button className="btn primary" onClick={create} disabled={!form.description || !form.store || !form.amount_total}>
+            Guardar
+          </button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
