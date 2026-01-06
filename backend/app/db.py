@@ -1,23 +1,61 @@
-from sqlmodel import SQLModel, create_engine, Session
+import os
+from functools import lru_cache
+from typing import Generator, Optional
+
 from pydantic_settings import BaseSettings
+from sqlmodel import Session, SQLModel, create_engine
+
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:///./gastos.db"
+    # If set, we use Neon/Postgres. If not, we fall back to local SQLite.
+    DATABASE_URL: Optional[str] = None
+
+    # other settings you might already be using
+    JWT_SECRET: str = "CHANGE_ME"
+    TOKEN_EXPIRE_MIN: int = 60 * 24 * 14  # 14 days
     CORS_ORIGINS: str = "http://localhost:5173"
-    JWT_SECRET: str = "change_me"
-    JWT_EXPIRE_MIN: int = 60 * 24 * 30  # 30 days
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
-settings = Settings()
 
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(settings.DATABASE_URL, echo=False, connect_args=connect_args)
+@lru_cache
+def get_settings() -> Settings:
+    s = Settings()
+    # Normalize Neon URL if it comes as postgres://
+    if s.DATABASE_URL:
+        s.DATABASE_URL = s.DATABASE_URL.replace("postgres://", "postgresql://")
+    return s
 
-def get_session():
+
+settings = get_settings()
+
+
+def _database_url() -> str:
+    if settings.DATABASE_URL and settings.DATABASE_URL.strip():
+        return settings.DATABASE_URL.strip()
+    return "sqlite:///./gastos.db"
+
+
+DATABASE_URL = _database_url()
+
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+)
+
+
+def init_db() -> None:
+    SQLModel.metadata.create_all(engine)
+
+
+def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
-
-def init_db():
-    SQLModel.metadata.create_all(engine)
