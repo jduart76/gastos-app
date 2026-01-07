@@ -39,7 +39,7 @@ export function Table<T extends Record<string, any>>(props: {
         <thead>
           <tr>
             {props.cols.map(c=>(
-              <th key={String(c.key)} onClick={()=>toggleSort(String(c.key))}>
+              <th key={`${String(c.key)}-${c.label}`} onClick={()=>toggleSort(String(c.key))}>
                 {c.label}{sortKey===String(c.key) ? (sortDir===1 ? " ▲" : " ▼") : ""}
               </th>
             ))}
@@ -49,7 +49,7 @@ export function Table<T extends Record<string, any>>(props: {
           {sorted.map((r, idx)=>(
             <tr key={idx} onClick={()=>props.onRowClick?.(r)} style={{cursor: props.onRowClick ? "pointer":"default"}}>
               {props.cols.map(c=>(
-                <td key={String(c.key)} className={c.mono ? "mono" : ""}>
+                <td key={`${String(c.key)}-${c.label}`} className={c.mono ? "mono" : ""}>
                   {c.render ? c.render(r) : String(r[c.key] ?? "")}
                 </td>
               ))}

@@ -56,20 +56,60 @@ export function PurchasesPage(props: { onOpenPurchase: (id:number)=>void }) {
         {err ? <span className="chip bad">{err}</span> : null}
       </div>
 
-      <Table
-        rows={rows}
-        cols={[
-          { key:"purchase_date", label:"Fecha" },
-          { key:"store", label:"Tienda" },
-          { key:"description", label:"Descripción" },
-          { key:"amount_total", label:"Total", mono:true, render:(r)=>`$${r.amount_total.toFixed(2)}` },
-          { key:"monthly_amount", label:"Mensual", mono:true, render:(r)=>`$${r.monthly_amount.toFixed(2)}` },
-          { key:"pending", label:"Pendiente", mono:true, render:(r)=>(
-            r.pending <= 0.005 ? <span className="chip ok">Cerrada</span> : <span className="chip bad">${r.pending.toFixed(2)}</span>
-          )},
-        ]}
-        onRowClick={(r)=>props.onOpenPurchase(r.id)}
-      />
+    <Table
+    rows={rows}
+    cols={[
+        { key: "purchase_date", label: "Fecha" },
+        { key: "store", label: "Tienda" },
+        { key: "description", label: "Descripción" },
+
+        // ✅ MSI Sí/No
+        {
+        key: "is_msi",
+        label: "MSI",
+        render: (r) => (r.is_msi ? <span className="chip ok">Sí</span> : <span className="chip">No</span>),
+        },
+
+        // ✅ Cuántos MSI
+        {
+        key: "msi_months",
+        label: "# MSI",
+        mono: true,
+        render: (r) => (r.is_msi ? String(r.msi_months ?? "") : "—"),
+        },
+
+        { key: "amount_total", label: "Total", mono: true, render: (r) => `$${r.amount_total.toFixed(2)}` },
+        { key: "monthly_amount", label: "Mensual", mono: true, render: (r) => `$${r.monthly_amount.toFixed(2)}` },
+
+        // ✅ Pago individual si split 50/50
+        {
+        key: "split_mode",
+        label: "Juan (50/50)",
+        mono: true,
+        render: (r) => (r.split_mode === "half" ? `$${(r.monthly_amount / 2).toFixed(2)}` : "—"),
+        },
+        {
+        key: "split_mode",
+        label: "Kenia (50/50)",
+        mono: true,
+        render: (r) => (r.split_mode === "half" ? `$${(r.monthly_amount / 2).toFixed(2)}` : "—"),
+        },
+
+        {
+        key: "pending",
+        label: "Pendiente",
+        mono: true,
+        render: (r) =>
+            r.pending <= 0.005 ? (
+            <span className="chip ok">Cerrada</span>
+            ) : (
+            <span className="chip bad">${r.pending.toFixed(2)}</span>
+            ),
+        },
+    ]}
+    onRowClick={(r) => props.onOpenPurchase(r.id)}
+    />
+
 
       <Modal open={open} title="Nueva compra" onClose={()=>setOpen(false)}>
         <div className="row">
