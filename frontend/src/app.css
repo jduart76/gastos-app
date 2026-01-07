@@ -445,3 +445,35 @@ input, select{
   border-color: rgba(73,217,140,.35);
   background: rgba(73,217,140,.12);
 }
+
+/* ===== Tables responsive (iPhone friendly) ===== */
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;              /* <-- clave */
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch; /* scroll suave iOS */
+  border-radius: 14px;
+}
+
+/* Evita que la tabla se comprima */
+.tableWrap table {
+  width: max-content;            /* <-- clave */
+  min-width: 100%;
+  border-collapse: collapse;
+}
+
+/* Mantén las celdas legibles */
+.tableWrap th,
+.tableWrap td {
+  white-space: nowrap;           /* <-- evita saltos raros */
+}
+
+/* Scrollbar discreto (no molesta en desktop) */
+.tableWrap::-webkit-scrollbar {
+  height: 6px;
+}
+.tableWrap::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.25);
+  border-radius: 6px;
+}
