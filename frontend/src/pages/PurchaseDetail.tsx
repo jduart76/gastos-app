@@ -77,11 +77,14 @@ export function PurchaseDetailPage(props: { id: number; onBack: ()=>void }) {
 
       {purchase ? (
         <div className="grid">
-          <div className="card" style={{gridColumn:"span 6"}}>
-            <div className="label">Compra</div>
-            <div className="value">{purchase.store}</div>
-            <div className="hint">{purchase.description} · {purchase.purchase_date}</div>
-          </div>
+            <div className="card" style={{gridColumn:"span 6"}}>
+                <div className="label">Compra</div>
+                <div className="value">{purchase.store}</div>
+                <div className="hint">
+                {purchase.description} · {purchase.purchase_date}
+            {purchase.start_month ? ` · Primer pago ${purchase.start_month}` : ""}
+            </div>
+        </div>
           <div className="card" style={{gridColumn:"span 3"}}>
             <div className="label">Total</div>
             <div className="value">${purchase.amount_total.toFixed(2)}</div>

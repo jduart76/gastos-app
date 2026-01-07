@@ -62,6 +62,16 @@ export function PurchasesPage(props: { onOpenPurchase: (id:number)=>void }) {
         { key: "purchase_date", label: "Fecha" },
         { key: "store", label: "Tienda" },
         { key: "description", label: "Descripción" },
+        {
+        key: "start_month",
+        label: "Primer pago",
+        mono: true,
+        render: (r) =>
+            r.is_msi
+            ? r.start_month
+            : "—",
+        },
+
 
         // ✅ MSI Sí/No
         {
@@ -76,6 +86,12 @@ export function PurchasesPage(props: { onOpenPurchase: (id:number)=>void }) {
         label: "# MSI",
         mono: true,
         render: (r) => (r.is_msi ? String(r.msi_months ?? "") : "—"),
+        },
+        {
+        key: "start_month",
+        label: "Primer pago",
+        mono: true,
+        render: (r) => r.start_month || "—",
         },
 
         { key: "amount_total", label: "Total", mono: true, render: (r) => `$${r.amount_total.toFixed(2)}` },
