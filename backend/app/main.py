@@ -22,18 +22,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-origins = [
-    "https://gastos-app.pages.dev",
-    # si tienes dominio custom, agrégalo aquí también
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://gastos-app.pages.dev",
+        "http://localhost:5173",   # opcional para dev
+        "http://127.0.0.1:5173",   # opcional para dev
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
