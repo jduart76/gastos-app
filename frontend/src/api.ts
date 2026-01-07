@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_BASE_URL;
+const API_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+if (!API_URL) {
+  throw new Error("Missing VITE_API_BASE_URL. Set it in Cloudflare Pages environment variables.");
+}
 
 
 export function getToken(): string | null {
