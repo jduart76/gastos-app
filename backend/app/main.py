@@ -9,6 +9,34 @@ from .models import User, Purchase, Payment
 from .auth import hash_pin, verify_pin, create_token, decode_token
 from .services import dashboard_for_month, pending_balance, purchase_monthly_amount, month_str
 
+import os
+from fastapi import APIRouter, HTTPException
+from sqlmodel import Session, select
+
+from .db import engine
+from .models import User
+from .auth import hash_pin
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+ADMIN_RESET_TOKEN = os.getenv("ADMIN_RESET_TOKEN", "")
+
+@router.post("/reset-pin")
+def reset_pin(name: str, new_pin: str, token: str):
+    if not ADMIN_RESET_TOKEN or token != ADMIN_RESET_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    with Session(engine) as s:
+        user = s.exec(select(User).where(User.name == name)).first()
+        if not user:
+            user = User(name=name, pin_hash=hash_pin(new_pin))
+            s.add(user)
+        else:
+            user.pin_hash = hash_pin(new_pin)
+        s.commit()
+    return {"ok": True}
+
+
 app = FastAPI(title="Gastos API")
 
 app.add_middleware(

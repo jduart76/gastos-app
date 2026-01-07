@@ -31,4 +31,13 @@ websockets==15.0.1
 pydantic-settings
 sqlmodel
 psycopg2-binary
+fastapi
+uvicorn[standard]
+sqlmodel
+sqlalchemy
+psycopg2-binary
+pydantic-settings
+python-dotenv
+bcrypt==4.2.1
+
 
