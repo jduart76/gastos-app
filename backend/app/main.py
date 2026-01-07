@@ -16,14 +16,18 @@ app = FastAPI(title="Gastos API")
 # --- CORS ---
 # settings.CORS_ORIGINS debe ser: "https://gastos-app.pages.dev,http://localhost:5173"
 origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
+print("CORS_ORIGINS setting:", settings.CORS_ORIGINS)
+print("Parsed origins:", origins)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"^https:\/\/.*\.pages\.dev$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # --- Admin router ---
 router = APIRouter(prefix="/admin", tags=["admin"])
