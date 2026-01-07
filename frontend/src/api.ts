@@ -34,7 +34,12 @@ export const api = {
   login: (name: string, pin: string) =>
     req(`/api/auth/login?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`, { method: "POST" }),
 
-  me: () => req("/api/me"),
+    me: () => req("/api/me"),
+  changePin: (oldPin: string, newPin: string) =>
+    req("/api/auth/change-pin", {
+      method: "POST",
+      body: JSON.stringify({ old_pin: oldPin, new_pin: newPin }),
+    }),
 
   dashboard: (month: string) => req(`/api/dashboard?month=${encodeURIComponent(month)}`),
 
@@ -48,10 +53,5 @@ export const api = {
   updatePayment: (id: number, p: any) => req(`/api/payments/${id}`, { method: "PUT", body: JSON.stringify(p) }),
   deletePayment: (id: number) => req(`/api/payments/${id}`, { method: "DELETE" }),
 
-    changePin: (oldPin: string, newPin: string) =>
-    req("/api/auth/change-pin", {
-      method: "POST",
-      body: JSON.stringify({ old_pin: oldPin, new_pin: newPin }),
-    }),
 };
 
