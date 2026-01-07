@@ -100,6 +100,7 @@ def login(name: str, pin: str, session: Session = Depends(get_session)):
     if not user or not verify_pin(pin, user.pin_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_token(name, settings.JWT_SECRET, settings.TOKEN_EXPIRE_MIN)
+    return {"access_token": token, "user": name}
 
 
 @app.get("/api/me")
