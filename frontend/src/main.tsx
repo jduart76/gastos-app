@@ -25,10 +25,13 @@ function App() {
     <>
       {page !== "login" ? (
         <TopBar
-          user={user}
-          onNav={(p)=>setPage(p as any)}
-          onLogout={logout}
-        />
+            user={user}
+            onNav={(p)=>{
+                if (p === "profile") setPage("dashboard"); // temporal
+                else setPage(p as any);
+            }}
+  onLogout={logout}
+/>
       ) : null}
 
       {page === "login" ? (

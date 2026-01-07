@@ -233,3 +233,161 @@ input, select{
   border-color: rgba(120,180,255,.55);
   box-shadow: 0 0 0 4px rgba(120,180,255,.15);
 }
+
+/* --- iOS topbar layout --- */
+.iosTopbar{
+  /* ya tienes sticky + safe-area en .topbar */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.iosTopbarInner{
+  /* Cambiamos el layout a grid: izq (44) / centro / der */
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Título centrado real, estilo iOS */
+.iosTitle{
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: .2px;
+  font-size: 16px;
+}
+
+/* Botón táctil iOS 44x44 */
+.iconBtn{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.iconBtn:active{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.10);
+}
+
+.iosRight{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+/* --- Mejor shell en iPhone --- */
+/* Tu .shell hoy tiene max 980 y padding 16. En móvil, lo hacemos más “app-like”. */
+.shell{
+  max-width: 720px;
+  margin: 0 auto;
+  padding-left: calc(14px + env(safe-area-inset-left));
+  padding-right: calc(14px + env(safe-area-inset-right));
+  padding-top: calc(10px + env(safe-area-inset-top));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+}
+
+/* --- Drawer (sidebar) --- */
+.drawerOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 60;
+}
+
+.drawer{
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(86vw, 340px);
+  padding-top: calc(env(safe-area-inset-top) + 10px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+
+  background: rgba(18,24,36,.92);
+  border-right: 1px solid var(--stroke);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55);
+  z-index: 61;
+
+  transform: translateX(-105%);
+  transition: transform 180ms ease-out;
+}
+.drawer.open{ transform: translateX(0); }
+
+.drawerHeader{
+  display:flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.drawerProfile{
+  display:flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.avatar{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.10);
+  display:grid;
+  place-items:center;
+  font-weight: 900;
+}
+
+.profileName{ font-weight: 850; }
+.profileSub{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.drawerNav{
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.drawerItem{
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 0 12px;
+  cursor:pointer;
+  font-weight: 800;
+  -webkit-tap-highlight-color: transparent;
+}
+.drawerItem:active{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.10);
+}
+.drawerItem .drawerHint{
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.drawerDivider{
+  height: 1px;
+  background: rgba(255,255,255,.10);
+  margin: 8px 4px;
+}
+
+.drawerItem.danger{
+  background: rgba(255,93,93,.10);
+  border-color: rgba(255,93,93,.22);
+}
+
+/* En pantallas grandes, tu UI sigue funcionando: no toca tu grid/table */

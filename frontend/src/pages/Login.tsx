@@ -29,7 +29,7 @@ export function Login(props: { onDone: (user: string)=>void }) {
         <div className="card" style={{gridColumn:"span 12"}}>
           <div className="label">Acceso</div>
           <div className="value">Login con PIN</div>
-          <div className="hint">Usuarios: Juan / Kenia (por defecto: 1111 y 2222 — cámbialos después).</div>
+          <div className="hint">Usuarios: Juan / Kenia</div>
 
           <div className="field">
             <label>Usuario</label>
