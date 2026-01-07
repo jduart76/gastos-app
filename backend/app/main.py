@@ -11,7 +11,16 @@ from .models import User, Purchase, Payment
 from .auth import hash_pin, verify_pin, create_token, decode_token
 from .services import dashboard_for_month, pending_balance, purchase_monthly_amount
 
+from pydantic import BaseModel
+
+class ChangePinPayload(BaseModel):
+    old_pin: str
+    new_pin: str
+
+
 app = FastAPI(title="Gastos API")
+
+
 
 # --- CORS ---
 # settings.CORS_ORIGINS debe ser: "https://gastos-app.pages.dev,http://localhost:5173"
@@ -186,3 +195,23 @@ def add_payment(payload: dict, user: str = Depends(require_user), session: Sessi
     ))
     session.commit()
     return {"ok": True, "created": 1}
+
+class ChangePinPayload(BaseModel):
+    old_pin: str
+    new_pin: str
+
+
+@app.post("/api/auth/change-pin")
+def change_pin(
+    payload: ChangePinPayload,
+    user: str = Depends(require_user),
+    session: Session = Depends(get_session),
+):
+    u = session.exec(select(User).where(User.name == user)).first()
+    if not u or not verify_pin(payload.old_pin, u.pin_hash):
+        raise HTTPException(status_code=401, detail="Invalid current PIN")
+
+    u.pin_hash = hash_pin(payload.new_pin)
+    session.add(u)
+    session.commit()
+    return {"ok": True}

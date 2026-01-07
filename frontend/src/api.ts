@@ -3,7 +3,6 @@ if (!API_URL) {
   throw new Error("Missing VITE_API_BASE_URL. Set it in Cloudflare Pages environment variables.");
 }
 
-
 export function getToken(): string | null {
   return localStorage.getItem("token");
 }
@@ -47,5 +46,12 @@ export const api = {
 
   addPayment: (p: any) => req("/api/payments", { method: "POST", body: JSON.stringify(p) }),
   updatePayment: (id: number, p: any) => req(`/api/payments/${id}`, { method: "PUT", body: JSON.stringify(p) }),
-  deletePayment: (id: number) => req(`/api/payments/${id}`, { method: "DELETE" })
+  deletePayment: (id: number) => req(`/api/payments/${id}`, { method: "DELETE" }),
+
+    changePin: (oldPin: string, newPin: string) =>
+    req("/api/auth/change-pin", {
+      method: "POST",
+      body: JSON.stringify({ old_pin: oldPin, new_pin: newPin }),
+    }),
 };
+
