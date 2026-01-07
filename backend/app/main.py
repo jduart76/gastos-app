@@ -17,6 +17,25 @@ from .db import engine
 from .models import User
 from .auth import hash_pin
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+app = FastAPI()
+
+origins = [
+    "https://gastos-app.pages.dev",
+    # si tienes dominio custom, agrégalo aquí también
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 ADMIN_RESET_TOKEN = os.getenv("ADMIN_RESET_TOKEN", "")
