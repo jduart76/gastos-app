@@ -123,7 +123,6 @@ def dashboard(
     session: Session = Depends(get_session),
     user: str = Depends(require_user),
 ):
-    # services.dashboard_for_month debe aceptar (month, session)
     return dashboard_for_month(month, session)
 
 
@@ -163,9 +162,31 @@ def _validate_split(payload: dict) -> tuple[str, Optional[int], Optional[int]]:
     return "custom", juan, kenia
 
 
+def _payments_for_purchase(session: Session, purchase_id: int) -> list[Payment]:
+    return session.exec(select(Payment).where(Payment.purchase_id == purchase_id)).all()
+
+
 def _sum_paid(session: Session, purchase_id: int) -> float:
-    pays = session.exec(select(Payment).where(Payment.purchase_id == purchase_id)).all()
+    pays = _payments_for_purchase(session, purchase_id)
     return float(sum(p.amount for p in pays))
+
+
+def _paid_by_payer(session: Session, purchase_id: int) -> tuple[float, float]:
+    """
+    Regresa (paid_juan, paid_kenia) sumando pagos por payer de forma case-insensitive.
+    """
+    pays = _payments_for_purchase(session, purchase_id)
+    juan = 0.0
+    kenia = 0.0
+
+    for p in pays:
+        who = (p.payer or "").strip().lower()
+        if who == "juan":
+            juan += float(p.amount)
+        elif who == "kenia":
+            kenia += float(p.amount)
+
+    return juan, kenia
 
 
 @app.get("/api/purchases")
@@ -176,7 +197,14 @@ def list_purchases(
     purchases = session.exec(select(Purchase).order_by(Purchase.purchase_date.desc())).all()
     out = []
     for p in purchases:
-        paid = _sum_paid(session, p.id) if p.id else 0.0
+        if not p.id:
+            paid = 0.0
+            paid_juan = 0.0
+            paid_kenia = 0.0
+        else:
+            paid_juan, paid_kenia = _paid_by_payer(session, p.id)
+            paid = paid_juan + paid_kenia
+
         out.append(
             {
                 "id": p.id,
@@ -192,7 +220,12 @@ def list_purchases(
                 "split_kenia_pct": p.split_kenia_pct,
                 "created_by": p.created_by,
                 "monthly_amount": purchase_monthly_amount(p),
-                "paid": round(paid, 2),
+
+                # ✅ pagado real total y por persona
+                "paid": round(float(paid), 2),
+                "paid_juan": round(float(paid_juan), 2),
+                "paid_kenia": round(float(paid_kenia), 2),
+
                 "pending": pending_balance(p),
             }
         )
@@ -242,7 +275,7 @@ def create_purchase(
     return {"id": p.id}
 
 
-# ✅ NUEVO: detalle de compra (para PurchaseDetail)
+# ✅ detalle de compra (para PurchaseDetail)
 @app.get("/api/purchases/{purchase_id}")
 def purchase_detail(
     purchase_id: int,
@@ -259,7 +292,17 @@ def purchase_detail(
         .order_by(Payment.payment_date.desc())
     ).all()
 
-    paid = float(sum(x.amount for x in payments))
+    paid_juan = 0.0
+    paid_kenia = 0.0
+    for x in payments:
+        who = (x.payer or "").strip().lower()
+        if who == "juan":
+            paid_juan += float(x.amount)
+        elif who == "kenia":
+            paid_kenia += float(x.amount)
+
+    paid = paid_juan + paid_kenia
+
     purchase_out = {
         "id": p.id,
         "purchase_date": str(p.purchase_date),
@@ -274,7 +317,12 @@ def purchase_detail(
         "split_kenia_pct": p.split_kenia_pct,
         "created_by": p.created_by,
         "monthly_amount": purchase_monthly_amount(p),
-        "paid": round(paid, 2),
+
+        # ✅ pagado real total y por persona
+        "paid": round(float(paid), 2),
+        "paid_juan": round(float(paid_juan), 2),
+        "paid_kenia": round(float(paid_kenia), 2),
+
         "pending": pending_balance(p),
     }
 

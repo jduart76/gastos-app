@@ -11,16 +11,33 @@ function clampPct(n: number) {
   return Math.max(0, Math.min(100, n));
 }
 
+function fmtMoney(n: number) {
+  const x = Number.isFinite(n) ? n : 0;
+  return `$${x.toFixed(2)}`;
+}
+
 function pctJuan(r: Purchase): number | null {
   if (r.split_mode === "custom") return r.split_juan_pct ?? 0;
   if (r.split_mode === "half") return 50;
-  return null;
+  return null; // full (no split)
 }
 
 function pctKenia(r: Purchase): number | null {
   if (r.split_mode === "custom") return r.split_kenia_pct ?? 0;
   if (r.split_mode === "half") return 50;
-  return null;
+  return null; // full (no split)
+}
+
+/**
+ * Estos campos deben venir del backend en GET /api/purchases:
+ *   paid_juan, paid_kenia  (números)
+ * Si no vienen, se mostrarán como 0.00.
+ */
+function paidJuan(r: Purchase): number {
+  return Number((r as any).paid_juan ?? 0) || 0;
+}
+function paidKenia(r: Purchase): number {
+  return Number((r as any).paid_kenia ?? 0) || 0;
 }
 
 export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
@@ -121,7 +138,7 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
         <Table
           rows={rows}
           cols={[
-            { key: "purchase_date", label: "Fecha" },
+            { key: "purchase_date", label: "Fecha", mono: true },
             { key: "store", label: "Tienda" },
             { key: "description", label: "Descripción" },
 
@@ -144,29 +161,46 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
               render: (r) => (r.is_msi ? String(r.msi_months ?? "") : "—"),
             },
 
-            { key: "amount_total", label: "Total", mono: true, render: (r) => `$${r.amount_total.toFixed(2)}` },
-            { key: "monthly_amount", label: "Mensual", mono: true, render: (r) => `$${r.monthly_amount.toFixed(2)}` },
+            { key: "amount_total", label: "Total", mono: true, render: (r) => fmtMoney(r.amount_total) },
+            { key: "monthly_amount", label: "Mensual", mono: true, render: (r) => fmtMoney(r.monthly_amount) },
 
+            // ===== JUAN =====
             {
               key: "split_mode",
-              label: "Juan",
+              label: "Juan (pagado)",
               mono: true,
-              render: (r) => {
-                const pct = pctJuan(r);
-                if (pct == null) return "—";
-                const amt = (r.monthly_amount * pct) / 100;
-                return `$${amt.toFixed(2)} (${pct}%)`;
-              },
+              render: (r) => fmtMoney(paidJuan(r)),
             },
             {
               key: "split_mode",
-              label: "Kenia",
+              label: "Juan (por pagar)",
+              mono: true,
+              render: (r) => {
+                const pct = pctJuan(r);
+                if (pct == null) return "—"; // full: no split
+                const share = (r.amount_total * pct) / 100; // ✅ total share
+                const pending = Math.max(share - paidJuan(r), 0);
+                return `${fmtMoney(pending)} (${pct}%)`;
+              },
+            },
+
+            // ===== KENIA =====
+            {
+              key: "split_mode",
+              label: "Kenia (pagado)",
+              mono: true,
+              render: (r) => fmtMoney(paidKenia(r)),
+            },
+            {
+              key: "split_mode",
+              label: "Kenia (por pagar)",
               mono: true,
               render: (r) => {
                 const pct = pctKenia(r);
-                if (pct == null) return "—";
-                const amt = (r.monthly_amount * pct) / 100;
-                return `$${amt.toFixed(2)} (${pct}%)`;
+                if (pct == null) return "—"; // full: no split
+                const share = (r.amount_total * pct) / 100; // ✅ total share
+                const pending = Math.max(share - paidKenia(r), 0);
+                return `${fmtMoney(pending)} (${pct}%)`;
               },
             },
 
