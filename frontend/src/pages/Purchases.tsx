@@ -6,6 +6,23 @@ import { Modal } from "../components/Modal";
 import { Segmented } from "../components/Segmented";
 import { Loading } from "../components/Loading";
 
+function clampPct(n: number) {
+  if (Number.isNaN(n)) return 0;
+  return Math.max(0, Math.min(100, n));
+}
+
+function pctJuan(r: Purchase): number | null {
+  if (r.split_mode === "custom") return r.split_juan_pct ?? 0;
+  if (r.split_mode === "half") return 50;
+  return null;
+}
+
+function pctKenia(r: Purchase): number | null {
+  if (r.split_mode === "custom") return r.split_kenia_pct ?? 0;
+  if (r.split_mode === "half") return 50;
+  return null;
+}
+
 export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
   const [rows, setRows] = React.useState<Purchase[]>([]);
   const [err, setErr] = React.useState<string | null>(null);
@@ -17,10 +34,14 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
     description: "",
     store: "",
     amount_total: "",
+
     is_msi: "false",
     msi_months: "",
     start_month: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`,
-    split_mode: "full",
+
+    split_mode: "full", // "full" | "custom"
+    split_juan_pct: "50",
+    split_kenia_pct: "50",
   });
 
   async function load() {
@@ -41,15 +62,33 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
   }, []);
 
   async function create() {
-    const payload = {
+    // validación split custom
+    let splitJuan: number | null = null;
+    let splitKenia: number | null = null;
+    const splitModeToSend: "full" | "custom" = form.split_mode as any;
+
+    if (splitModeToSend === "custom") {
+      splitJuan = clampPct(Number(form.split_juan_pct || "0"));
+      splitKenia = clampPct(Number(form.split_kenia_pct || "0"));
+      if (splitJuan + splitKenia !== 100) {
+        setErr("Los porcentajes deben sumar 100.");
+        return;
+      }
+    }
+
+    const payload: any = {
       purchase_date: form.purchase_date,
       description: form.description,
       store: form.store,
       amount_total: Number(form.amount_total),
+
       is_msi: form.is_msi === "true",
       msi_months: form.is_msi === "true" ? Number(form.msi_months || 0) : null,
       start_month: form.start_month,
-      split_mode: form.split_mode,
+
+      split_mode: splitModeToSend,
+      split_juan_pct: splitModeToSend === "custom" ? splitJuan : null,
+      split_kenia_pct: splitModeToSend === "custom" ? splitKenia : null,
     };
 
     try {
@@ -57,10 +96,10 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
       setLoading(true);
       await api.createPurchase(payload);
       setOpen(false);
-      setForm({ ...form, description: "", store: "", amount_total: "", msi_months: "" });
+      setForm((f) => ({ ...f, description: "", store: "", amount_total: "", msi_months: "" }));
       await load();
     } catch (e: any) {
-      setErr("No se pudo guardar la compra.");
+      setErr(String(e?.message ?? "No se pudo guardar la compra."));
     } finally {
       setLoading(false);
     }
@@ -72,12 +111,10 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
         <button className="btn primary" onClick={() => setOpen(true)} disabled={loading}>
           ➕ Nueva compra
         </button>
-
         {loading ? <Loading inline label="Cargando…" /> : null}
         {err ? <span className="chip bad">{err}</span> : null}
       </div>
 
-      {/* ✅ Loader para la tabla */}
       {loading ? (
         <Loading label="Cargando compras…" />
       ) : (
@@ -88,7 +125,6 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
             { key: "store", label: "Tienda" },
             { key: "description", label: "Descripción" },
 
-            // ✅ Primer pago (solo si es MSI)
             {
               key: "start_month",
               label: "Primer pago",
@@ -96,14 +132,11 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
               render: (r) => (r.is_msi ? r.start_month : "—"),
             },
 
-            // ✅ MSI Sí/No
             {
               key: "is_msi",
               label: "MSI",
               render: (r) => (r.is_msi ? <span className="chip ok">Sí</span> : <span className="chip">No</span>),
             },
-
-            // ✅ Cuántos MSI
             {
               key: "msi_months",
               label: "# MSI",
@@ -114,18 +147,27 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
             { key: "amount_total", label: "Total", mono: true, render: (r) => `$${r.amount_total.toFixed(2)}` },
             { key: "monthly_amount", label: "Mensual", mono: true, render: (r) => `$${r.monthly_amount.toFixed(2)}` },
 
-            // ✅ Pago individual si split 50/50
             {
               key: "split_mode",
-              label: "Juan (50/50)",
+              label: "Juan",
               mono: true,
-              render: (r) => (r.split_mode === "half" ? `$${(r.monthly_amount / 2).toFixed(2)}` : "—"),
+              render: (r) => {
+                const pct = pctJuan(r);
+                if (pct == null) return "—";
+                const amt = (r.monthly_amount * pct) / 100;
+                return `$${amt.toFixed(2)} (${pct}%)`;
+              },
             },
             {
               key: "split_mode",
-              label: "Kenia (50/50)",
+              label: "Kenia",
               mono: true,
-              render: (r) => (r.split_mode === "half" ? `$${(r.monthly_amount / 2).toFixed(2)}` : "—"),
+              render: (r) => {
+                const pct = pctKenia(r);
+                if (pct == null) return "—";
+                const amt = (r.monthly_amount * pct) / 100;
+                return `$${amt.toFixed(2)} (${pct}%)`;
+              },
             },
 
             {
@@ -147,18 +189,19 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
       <Modal open={open} title="Nueva compra" onClose={() => setOpen(false)}>
         <div className="row">
           <div className="field">
-            <label htmlFor="pd">Fecha</label>
+            <label htmlFor="p_purchase_date">Fecha</label>
             <input
-              id="pd"
+              id="p_purchase_date"
               type="date"
               value={form.purchase_date}
               onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
             />
           </div>
+
           <div className="field">
-            <label htmlFor="sm">Mes inicio (YYYY-MM)</label>
+            <label htmlFor="p_start_month">Mes inicio (YYYY-MM)</label>
             <input
-              id="sm"
+              id="p_start_month"
               value={form.start_month}
               onChange={(e) => setForm({ ...form, start_month: e.target.value })}
               placeholder="2026-01"
@@ -167,48 +210,80 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
         </div>
 
         <div className="field">
-          <label htmlFor="st">Tienda</label>
+          <label htmlFor="p_store">Tienda</label>
           <input
-            id="st"
+            id="p_store"
             value={form.store}
             onChange={(e) => setForm({ ...form, store: e.target.value })}
-            placeholder="Costco, Amazon, etc."
+            placeholder="Costco, Amazon…"
           />
         </div>
 
         <div className="field">
-          <label htmlFor="ds">Descripción</label>
+          <label htmlFor="p_description">Descripción</label>
           <input
-            id="ds"
+            id="p_description"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Ej. despensa, refacción..."
+            placeholder="Ej. despensa…"
           />
         </div>
 
         <div className="row">
           <div className="field">
-            <label htmlFor="amt">Monto total</label>
+            <label htmlFor="p_amount_total">Monto total</label>
             <input
-              id="amt"
+              id="p_amount_total"
               inputMode="decimal"
               value={form.amount_total}
               onChange={(e) => setForm({ ...form, amount_total: e.target.value })}
               placeholder="0.00"
             />
           </div>
+
           <div className="field">
-            <label>Split (expectativa)</label>
+            <label>Split</label>
             <Segmented
               value={form.split_mode}
               options={[
                 { key: "full", label: "Completo" },
-                { key: "half", label: "50/50" },
+                { key: "custom", label: "Personalizado" },
               ]}
               onChange={(v) => setForm({ ...form, split_mode: v })}
             />
           </div>
         </div>
+
+        {form.split_mode === "custom" ? (
+          <div className="row">
+            <div className="field">
+              <label htmlFor="p_pct_juan">Juan %</label>
+              <input
+                id="p_pct_juan"
+                inputMode="numeric"
+                value={form.split_juan_pct}
+                onChange={(e) => {
+                  const n = clampPct(Number((e.target.value || "0").replace(/[^\d]/g, "")));
+                  setForm((f) => ({ ...f, split_juan_pct: String(n), split_kenia_pct: String(100 - n) }));
+                }}
+                placeholder="60"
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="p_pct_kenia">Kenia %</label>
+              <input
+                id="p_pct_kenia"
+                inputMode="numeric"
+                value={form.split_kenia_pct}
+                onChange={(e) => {
+                  const n = clampPct(Number((e.target.value || "0").replace(/[^\d]/g, "")));
+                  setForm((f) => ({ ...f, split_kenia_pct: String(n), split_juan_pct: String(100 - n) }));
+                }}
+                placeholder="40"
+              />
+            </div>
+          </div>
+        ) : null}
 
         <div className="row">
           <div className="field">
@@ -223,13 +298,13 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
             />
           </div>
           <div className="field">
-            <label htmlFor="msi">Meses</label>
+            <label htmlFor="p_msi_months">Meses</label>
             <input
-              id="msi"
+              id="p_msi_months"
               inputMode="numeric"
               value={form.msi_months}
               onChange={(e) => setForm({ ...form, msi_months: e.target.value })}
-              placeholder="Ej. 12"
+              placeholder="12"
               disabled={form.is_msi !== "true"}
             />
           </div>
