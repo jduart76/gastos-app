@@ -82,8 +82,11 @@ def me(user: str = Depends(require_user)):
 
 
 @app.get("/api/dashboard")
-def dashboard(month: str, user: str = Depends(require_user), session: Session = Depends(get_session)):
-    # dashboard_for_month ya lo tienes en services.py
+def dashboard(
+    month: str,
+    session: Session = Depends(get_session),
+    user: str = Depends(require_user),
+):
     return dashboard_for_month(month, session)
 
 
