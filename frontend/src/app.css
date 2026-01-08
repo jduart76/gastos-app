@@ -24,31 +24,96 @@ body{
 
 a{ color:var(--accent); text-decoration:none; }
 
+/* ===== Layout (full-width responsive) ===== */
 .shell{
-  max-width: 980px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
-  padding: calc(16px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+  padding-left: calc(14px + env(safe-area-inset-left));
+  padding-right: calc(14px + env(safe-area-inset-right));
+  padding-top: calc(12px + env(safe-area-inset-top));
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
 
+@media (min-width: 900px){
+  .shell{
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+/* ===== Topbar ===== */
 .topbar{
-  position: sticky; top: 0;
+  position: sticky;
+  top: 0;
   padding-top: env(safe-area-inset-top);
   background: rgba(11,15,23,.62);
   border-bottom: 1px solid var(--stroke);
   z-index: 20;
 }
+
 .topbar-inner{
-  max-width: 980px;
+  width: 100%;
+  max-width: none;
   margin: 0 auto;
   padding: 14px 16px;
-  display:flex; align-items:center; justify-content:space-between;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
   gap:10px;
 }
+
+/* iOS-like blur (topbar) */
+.iosTopbar{
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.iosTopbarInner{
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .brand{
-  display:flex; flex-direction:column; gap:2px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
 }
 .brand .title{ font-weight: 800; letter-spacing: .2px; }
 .brand .sub{ font-size: 12px; color: var(--muted); }
+
+.iosTitle{
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: .2px;
+  font-size: 16px;
+}
+
+/* 44x44 tap area */
+.iconBtn{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.iconBtn:active{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.10);
+}
+
+.iosRight{
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
 
 .pill{
   display:inline-flex; align-items:center; gap:8px;
@@ -86,9 +151,12 @@ a{ color:var(--accent); text-decoration:none; }
 .card .hint{ color: var(--muted); font-size: 12px; margin-top: 6px; }
 
 .actions{
-  display:flex; gap:10px; flex-wrap:wrap;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
   margin-top: 14px;
 }
+
 .btn{
   padding: 11px 14px;
   border-radius: 14px;
@@ -107,31 +175,65 @@ a{ color:var(--accent); text-decoration:none; }
   background: rgba(255,93,93,.14);
 }
 
+/* ===== Tables (full-width + scroll both directions + max height) ===== */
 .tableWrap{
   margin-top: 14px;
-  border:1px solid var(--stroke);
+  width: 100%;
+  border: 1px solid var(--stroke);
   border-radius: var(--radius);
-  overflow:hidden;
   background: rgba(255,255,255,.04);
+
+  overflow-x: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* evita que crezca más que la ventana */
+  max-height: calc(100dvh - 220px);
 }
-table{
-  width:100%;
+
+/* Discreto scrollbar */
+.tableWrap::-webkit-scrollbar{
+  height: 6px;
+  width: 10px;
+}
+.tableWrap::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,0.25);
+  border-radius: 6px;
+}
+
+.table{
+  width: max-content;   /* permite scroll horizontal real */
+  min-width: 100%;      /* pero llena si cabe */
   border-collapse: collapse;
   font-size: 13px;
 }
-th, td{
+
+.table th, .table td{
   padding: 12px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   text-align:left;
   vertical-align: middle;
+  white-space: nowrap;
 }
-th{
+
+.table th{
   cursor:pointer;
   color: rgba(234,240,255,.86);
   background: rgba(255,255,255,.03);
-  position: sticky; top: 0;
+
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  /* Safari iOS */
+  -webkit-backdrop-filter: blur(10px);
+  /* Chrome/Edge/Firefox */
+  backdrop-filter: blur(10px);
 }
-tr:hover td{ background: rgba(255,255,255,.03); }
+
+.tableClickable tbody tr{ cursor: pointer; }
+.tableClickable tbody tr:hover td{ background: rgba(255,255,255,.03); }
+
 .mono{ font-variant-numeric: tabular-nums; }
 
 .chip{
@@ -145,6 +247,7 @@ tr:hover td{ background: rgba(255,255,255,.03); }
 .chip.ok{ border-color: rgba(73,217,140,.35); color: rgba(73,217,140,.9); background: rgba(73,217,140,.08); }
 .chip.bad{ border-color: rgba(255,93,93,.35); color: rgba(255,93,93,.9); background: rgba(255,93,93,.08); }
 
+/* ===== Modal ===== */
 .modalBackdrop{
   position: fixed;
   inset: 0;
@@ -155,6 +258,7 @@ tr:hover td{ background: rgba(255,255,255,.03); }
   padding: 18px;
   z-index: 50;
 }
+
 .modal{
   width: min(520px, 100%);
   border-radius: 22px;
@@ -164,8 +268,10 @@ tr:hover td{ background: rgba(255,255,255,.03); }
   padding: 16px;
 }
 .modal h2{ margin: 4px 0 10px; }
+
 .field{ display:flex; flex-direction:column; gap:6px; margin: 10px 0; }
 label{ font-size: 12px; color: var(--muted); }
+
 input, select{
   width:100%;
   padding: 12px 12px;
@@ -175,6 +281,7 @@ input, select{
   color: var(--text);
   outline:none;
 }
+
 .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 @media (max-width:520px){ .row{ grid-template-columns: 1fr; } }
 
@@ -197,102 +304,10 @@ input, select{
   background: rgba(110,168,255,.18);
   color: var(--text);
 }
-.small{ font-size: 12px; color: var(--muted); 
-}
-.modal-backdrop {
-  background: rgba(0, 0, 0, 0.3);
 
-  /* Safari iOS */
-  -webkit-backdrop-filter: blur(12px);
+.small{ font-size: 12px; color: var(--muted); }
 
-  /* Chrome / Firefox */
-  backdrop-filter: blur(12px);
-}
-
-.field-label{
-  display:block;
-  margin: 6px 0 8px;
-  font-size: 12px;
-  opacity: .75;
-}
-
-.field-input{
-  width: 220px;
-  max-width: 100%;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.06);
-  color: #fff;
-  outline: none;
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.field-input:focus{
-  border-color: rgba(120,180,255,.55);
-  box-shadow: 0 0 0 4px rgba(120,180,255,.15);
-}
-
-/* --- iOS topbar layout --- */
-.iosTopbar{
-  /* ya tienes sticky + safe-area en .topbar */
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-.iosTopbarInner{
-  /* Cambiamos el layout a grid: izq (44) / centro / der */
-  display: grid;
-  grid-template-columns: 44px 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Título centrado real, estilo iOS */
-.iosTitle{
-  text-align: center;
-  font-weight: 800;
-  letter-spacing: .2px;
-  font-size: 16px;
-}
-
-/* Botón táctil iOS 44x44 */
-.iconBtn{
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.iconBtn:active{
-  background: rgba(255,255,255,.08);
-  border-color: rgba(255,255,255,.10);
-}
-
-.iosRight{
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 10px;
-}
-
-/* --- Mejor shell en iPhone --- */
-/* Tu .shell hoy tiene max 980 y padding 16. En móvil, lo hacemos más “app-like”. */
-.shell{
-  max-width: 720px;
-  margin: 0 auto;
-  padding-left: calc(14px + env(safe-area-inset-left));
-  padding-right: calc(14px + env(safe-area-inset-right));
-  padding-top: calc(10px + env(safe-area-inset-top));
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
-}
-
-/* --- Drawer (sidebar) --- */
+/* ===== Drawer (sidebar) ===== */
 .drawerOverlay{
   position: fixed;
   inset: 0;
@@ -390,7 +405,7 @@ input, select{
   border-color: rgba(255,93,93,.22);
 }
 
-/* En pantallas grandes, tu UI sigue funcionando: no toca tu grid/table */
+/* Profile page cards */
 .profilePage{
   max-width: 720px;
   margin: 0 auto;
@@ -446,38 +461,7 @@ input, select{
   background: rgba(73,217,140,.12);
 }
 
-/* ===== Tables responsive (iPhone friendly) ===== */
-
-.tableWrap {
-  width: 100%;
-  overflow-x: auto;              /* <-- clave */
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch; /* scroll suave iOS */
-  border-radius: 14px;
-}
-
-/* Evita que la tabla se comprima */
-.tableWrap table {
-  width: max-content;            /* <-- clave */
-  min-width: 100%;
-  border-collapse: collapse;
-}
-
-/* Mantén las celdas legibles */
-.tableWrap th,
-.tableWrap td {
-  white-space: nowrap;           /* <-- evita saltos raros */
-}
-
-/* Scrollbar discreto (no molesta en desktop) */
-.tableWrap::-webkit-scrollbar {
-  height: 6px;
-}
-.tableWrap::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.25);
-  border-radius: 6px;
-}
-/* ===== Loading (iOS-style) ===== */
+/* ===== Loading ===== */
 .loadingBlock{
   display: grid;
   justify-items: center;
@@ -512,61 +496,3 @@ input, select{
 @keyframes spin{
   to { transform: rotate(360deg); }
 }
-
-/* ===== Desktop: usar más ancho en páginas ===== */
-.shell{
-  width: min(1200px, 100%);
-  margin: 0 auto;
-  padding: 16px 12px;
-}
-
-/* En pantallas grandes: casi full-width */
-@media (min-width: 900px){
-  .shell{
-    width: min(1600px, calc(100vw - 40px)); /* deja margen 20px por lado */
-    padding-left: 20px;
-    padding-right: 20px;
-  }
-}
-
-/* ===== Tabla: scroll horizontal + vertical y altura limitada ===== */
-.tableWrap{
-  width: 100%;
-  overflow-x: auto;      /* ✅ horizontal */
-  overflow-y: auto;      /* ✅ vertical */
-  -webkit-overflow-scrolling: touch;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-
-  /* ✅ limita el alto para no salirse de la ventana */
-  max-height: calc(100dvh - 220px); /* ajusta si tu topbar ocupa más/menos */
-}
-
-/* la tabla puede ser más ancha que el contenedor para permitir scroll */
-.table{
-  width: max-content;     /* importante para que respete columnas */
-  min-width: 100%;        /* pero que también se estire si cabe */
-  border-collapse: collapse;
-}
-
-/* mejora visual de celdas */
-.table th, .table td{
-  padding: 10px 12px;
-  white-space: nowrap; /* mantiene filas compactas */
-}
-
-/* ✅ sticky header (opcional, queda tipo app) */
-.table thead th{
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: rgba(15,15,18,.95);
-
-  /* Safari / iOS */
-  -webkit-backdrop-filter: blur(10px);
-
-  /* Chrome / Edge / Firefox */
-  backdrop-filter: blur(10px);
-}
-

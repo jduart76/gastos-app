@@ -43,9 +43,11 @@ export function Table<T extends Record<string, any>>(props: {
     return rows;
   }, [props.rows, sortKey, sortDir]);
 
+  const clickable = !!props.onRowClick;
+
   return (
     <div className="tableWrap">
-      <table className="table">
+      <table className={`table ${clickable ? "tableClickable" : ""}`}>
         <thead>
           <tr>
             {props.cols.map((c) => (
@@ -56,6 +58,7 @@ export function Table<T extends Record<string, any>>(props: {
             ))}
           </tr>
         </thead>
+
         <tbody>
           {sorted.map((r, i) => (
             <tr key={i} onClick={() => props.onRowClick?.(r)}>
@@ -66,6 +69,14 @@ export function Table<T extends Record<string, any>>(props: {
               ))}
             </tr>
           ))}
+
+          {sorted.length === 0 ? (
+            <tr>
+              <td colSpan={props.cols.length}>
+                <span className="small">Sin registros.</span>
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
