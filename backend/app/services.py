@@ -77,16 +77,24 @@ def _installment_amounts(p: Purchase) -> List[float]:
     return amounts
 
 
-def _paid_up_to_month(session: Session, purchase_id: int, yyyy_mm: str) -> float:
-    """
-    Pago acumulado hasta el fin del mes yyyy_mm (incluye pagos anteriores).
-    """
-    pays = _payments_for_purchase(session, purchase_id)
+def _paid_up_to_month(session: Session, p: Purchase, yyyy_mm: str) -> float:
+    pays = session.exec(
+        select(Payment).where(Payment.purchase_id == p.id)
+    ).all()
+
     total = 0.0
     for pay in pays:
-        if ym_le(month_str(pay.payment_date), yyyy_mm):
+        pay_ym = month_str(pay.payment_date)
+
+        # ✔ Solo cuenta pagos hasta el mes consultado
+        # ✔ Y solo desde el inicio del plan MSI
+        if ym_le(pay_ym, yyyy_mm) and (
+            not p.start_month or ym_le(p.start_month, pay_ym)
+        ):
             total += float(pay.amount)
+
     return round(total, 2)
+
 
 
 def _remaining_for_msi_month(session: Session, p: Purchase, yyyy_mm: str) -> float:
@@ -110,7 +118,8 @@ def _remaining_for_msi_month(session: Session, p: Purchase, yyyy_mm: str) -> flo
         return 0.0
 
     amounts = _installment_amounts(p)
-    paid_total = _paid_up_to_month(session, p.id, yyyy_mm)
+    paid_total = _paid_up_to_month(session, p, yyyy_mm)
+
 
     # Consume el pago acumulado desde la primera mensualidad
     remaining_paid = paid_total
