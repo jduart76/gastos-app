@@ -40,11 +40,41 @@ function paidKenia(r: Purchase): number {
   return Number((r as any).paid_kenia ?? 0) || 0;
 }
 
+function isClosed(r: Purchase) {
+  return (r.pending ?? 0) <= 0.005;
+}
+
+// CSV helpers
+function csvEscape(v: unknown) {
+  const s = String(v ?? "");
+  // escape quotes by doubling them
+  const escaped = s.replace(/"/g, '""');
+  // wrap if contains comma, quote, or newline
+  if (/[",\n\r]/.test(escaped)) return `"${escaped}"`;
+  return escaped;
+}
+
+function downloadTextFile(filename: string, content: string, mime = "text/csv;charset=utf-8") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
   const [rows, setRows] = React.useState<Purchase[]>([]);
   const [err, setErr] = React.useState<string | null>(null);
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+
+  // ✅ filtros
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "open" | "closed">("all");
+  const [q, setQ] = React.useState(""); // búsqueda en tienda + descripción
 
   const [form, setForm] = React.useState({
     purchase_date: new Date().toISOString().slice(0, 10),
@@ -77,6 +107,93 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
   React.useEffect(() => {
     load();
   }, []);
+
+  // ✅ orden default + filtros
+  const filteredRows = React.useMemo(() => {
+    const query = q.trim().toLowerCase();
+
+    return [...rows]
+      // fecha desc (ISO YYYY-MM-DD => localeCompare funciona perfecto)
+      .sort((a, b) => String(b.purchase_date).localeCompare(String(a.purchase_date)))
+      .filter((r) => {
+        if (statusFilter === "open") return !isClosed(r);
+        if (statusFilter === "closed") return isClosed(r);
+        return true;
+      })
+      .filter((r) => {
+        if (!query) return true;
+        const hay = `${r.store ?? ""} ${r.description ?? ""}`.toLowerCase();
+        return hay.includes(query);
+      });
+  }, [rows, statusFilter, q]);
+
+  function exportCsv() {
+    // Exporta lo que está filtrado (lo que ves)
+    const data = filteredRows;
+
+    const headers = [
+      "Fecha",
+      "Tienda",
+      "Descripción",
+      "PrimerPago(YYYY-MM)",
+      "MSI",
+      "MSI_Meses",
+      "Total",
+      "Mensual",
+
+      "Juan_Pagado",
+      "Juan_PorPagar",
+      "Juan_%",
+
+      "Kenia_Pagado",
+      "Kenia_PorPagar",
+      "Kenia_%",
+
+      "PendienteTotal",
+      "Estado",
+    ];
+
+    const lines: string[] = [];
+    lines.push(headers.map(csvEscape).join(","));
+
+    for (const r of data) {
+      const juanPct = pctJuan(r);
+      const keniaPct = pctKenia(r);
+
+      const juanShare = juanPct == null ? 0 : (r.amount_total * juanPct) / 100;
+      const keniaShare = keniaPct == null ? 0 : (r.amount_total * keniaPct) / 100;
+
+      const juanPorPagar = juanPct == null ? "" : Math.max(juanShare - paidJuan(r), 0).toFixed(2);
+      const keniaPorPagar = keniaPct == null ? "" : Math.max(keniaShare - paidKenia(r), 0).toFixed(2);
+
+      const row = [
+        r.purchase_date,
+        r.store,
+        r.description,
+        r.is_msi ? (r.start_month ?? "") : "",
+        r.is_msi ? "Sí" : "No",
+        r.is_msi ? (r.msi_months ?? "") : "",
+        r.amount_total.toFixed(2),
+        r.monthly_amount.toFixed(2),
+
+        paidJuan(r).toFixed(2),
+        juanPorPagar,
+        juanPct == null ? "" : String(juanPct),
+
+        paidKenia(r).toFixed(2),
+        keniaPorPagar,
+        keniaPct == null ? "" : String(keniaPct),
+
+        (r.pending ?? 0).toFixed(2),
+        isClosed(r) ? "Cerrada" : "Abierta",
+      ];
+
+      lines.push(row.map(csvEscape).join(","));
+    }
+
+    const ym = new Date().toISOString().slice(0, 10);
+    downloadTextFile(`purchases_${ym}.csv`, lines.join("\n"));
+  }
 
   async function create() {
     // validación split custom
@@ -128,15 +245,49 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
         <button className="btn primary" onClick={() => setOpen(true)} disabled={loading}>
           ➕ Nueva compra
         </button>
+
+        <button className="btn" onClick={exportCsv} disabled={loading || filteredRows.length === 0}>
+          ⬇️ Exportar CSV
+        </button>
+
         {loading ? <Loading inline label="Cargando…" /> : null}
         {err ? <span className="chip bad">{err}</span> : null}
+      </div>
+
+      {/* ✅ filtros */}
+      <div className="row">
+        <div className="field">
+          <label htmlFor="p_search">Buscar (tienda o descripción)</label>
+          <input
+            id="p_search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Ej. Costco, adoq…, boiler…"
+          />
+        </div>
+
+        <div className="field">
+          <label htmlFor="p_status">Estado</label>
+          <select id="p_status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
+            <option value="all">Todas</option>
+            <option value="open">Abiertas</option>
+            <option value="closed">Cerradas</option>
+          </select>
+        </div>
+
+        <div className="field" style={{ opacity: 0.85 }}>
+          <label>Mostrando</label>
+          <div className="small">
+            <b>{filteredRows.length}</b> de <b>{rows.length}</b>
+          </div>
+        </div>
       </div>
 
       {loading ? (
         <Loading label="Cargando compras…" />
       ) : (
         <Table
-          rows={rows}
+          rows={filteredRows}
           cols={[
             { key: "purchase_date", label: "Fecha", mono: true },
             { key: "store", label: "Tienda" },
@@ -178,7 +329,7 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
               render: (r) => {
                 const pct = pctJuan(r);
                 if (pct == null) return "—"; // full: no split
-                const share = (r.amount_total * pct) / 100; // ✅ total share
+                const share = (r.amount_total * pct) / 100; // total share
                 const pending = Math.max(share - paidJuan(r), 0);
                 return `${fmtMoney(pending)} (${pct}%)`;
               },
@@ -198,7 +349,7 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
               render: (r) => {
                 const pct = pctKenia(r);
                 if (pct == null) return "—"; // full: no split
-                const share = (r.amount_total * pct) / 100; // ✅ total share
+                const share = (r.amount_total * pct) / 100; // total share
                 const pending = Math.max(share - paidKenia(r), 0);
                 return `${fmtMoney(pending)} (${pct}%)`;
               },
@@ -209,11 +360,7 @@ export function PurchasesPage(props: { onOpenPurchase: (id: number) => void }) {
               label: "Pendiente",
               mono: true,
               render: (r) =>
-                r.pending <= 0.005 ? (
-                  <span className="chip ok">Cerrada</span>
-                ) : (
-                  <span className="chip bad">${r.pending.toFixed(2)}</span>
-                ),
+                isClosed(r) ? <span className="chip ok">Cerrada</span> : <span className="chip bad">${r.pending.toFixed(2)}</span>,
             },
           ]}
           onRowClick={(r) => props.onOpenPurchase(r.id)}
