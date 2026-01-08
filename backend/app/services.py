@@ -49,14 +49,13 @@ def paid_in_month(session: Session, purchase_id: int, yyyy_mm: str) -> float:
             total += float(pay.amount)
     return round(total, 2)
 
-def dashboard_for_month(session: Session, yyyy_mm: str) -> Dict:
+def dashboard_for_month(yyyy_mm: str, session: Session) -> Dict:
     purchases = session.exec(select(Purchase)).all()
     open_purchases = []
     total_pending = 0.0
     total_due_month = 0.0
 
     for p in purchases:
-        # load payments relationship lazily (SQLModel will handle when accessed)
         pb = pending_balance(p)
         if pb > 0.005:
             open_purchases.append(p)
@@ -70,7 +69,6 @@ def dashboard_for_month(session: Session, yyyy_mm: str) -> Dict:
 
     next_month = add_months(yyyy_mm, 1)
 
-    # total due next month (based on schedule and what’s already paid in next month)
     total_due_next = 0.0
     for p in purchases:
         due = expected_due_for_month(p, next_month)
@@ -86,3 +84,4 @@ def dashboard_for_month(session: Session, yyyy_mm: str) -> Dict:
         "total_due_next_month": round(total_due_next, 2),
         "open_count": len([p for p in purchases if pending_balance(p) > 0.005]),
     }
+

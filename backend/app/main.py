@@ -40,10 +40,8 @@ def _startup():
 
 
 # --- Auth helpers ---
-def require_user(
-    authorization: Optional[str] = Header(default=None),
-    session: Session = Depends(get_session),
-) -> str:
+def require_user(authorization: Optional[str] = Header(default=None)) -> str:
+
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing token")
     token = authorization.split(" ", 1)[1].strip()
@@ -72,7 +70,7 @@ def login(name: str, pin: str, session: Session = Depends(get_session)):
     if not verify_pin(pin, user.pin_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_token(name, settings.JWT_SECRET)
+    token = create_token(name, settings.JWT_SECRET, settings.TOKEN_EXPIRE_MIN)
     return {"access_token": token, "user": name}
 
 
@@ -88,6 +86,7 @@ def dashboard(
     user: str = Depends(require_user),
 ):
     return dashboard_for_month(month, session)
+
 
 
 def _validate_split(payload: dict) -> tuple[str, Optional[int], Optional[int]]:
