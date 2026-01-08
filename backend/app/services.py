@@ -31,14 +31,20 @@ def expected_months_for_purchase(p: Purchase) -> List[str]:
     return [p.start_month]
 
 def expected_due_for_month(p: Purchase, yyyy_mm: str) -> float:
-    # If purchase is not scheduled in that month, 0
-    if yyyy_mm not in expected_months_for_purchase(p):
+    # Si ya está cerrada, no debe generar "due"
+    if pending_balance(p) <= 0.005:
         return 0.0
 
-    base = purchase_monthly_amount(p)
-    # if split_mode=half, expectation for "you" is half, but we keep calculations global;
-    # we'll show both (total & "my share") in dashboard later if needed.
-    return base
+    # MSI: si ya inició (start_month <= yyyy_mm), entonces este mes toca mensualidad
+    if p.is_msi:
+        if p.start_month <= yyyy_mm:
+            return purchase_monthly_amount(p)
+        return 0.0
+
+    # No MSI (pago único): si la compra está pendiente, la contamos solo en el mes de compra
+    purchase_ym = p.purchase_date.strftime("%Y-%m")
+    return p.amount_total if purchase_ym == yyyy_mm else 0.0
+
 
 def paid_in_month(session: Session, purchase_id: int, yyyy_mm: str) -> float:
     q = select(Payment).where(Payment.purchase_id == purchase_id)
